@@ -111,7 +111,7 @@ export const api = {
                     endTime: booking ? booking.endTime : now.format()
                 };
             })
-            .sort((a, b) => dayjs(a.endTime || '').diff(dayjs(b.endTime || '')));
+            .sort((a, b) => dayjs(a.endTime).unix() - dayjs(b.endTime).unix());
 
         const parkingEndTimes = parkingSpots
             .map((spot: ParkingSpot) => {
@@ -134,11 +134,11 @@ export const api = {
                 : parkingQueue.findIndex(q => q.id === item.id);
 
             const endTimeObj = item.bookingType === '充电' ? chargingEndTimes[position] : parkingEndTimes[position];
-            const relevantEndTime = endTimeObj?.endTime || now.format();
+            const endTime = endTimeObj?.endTime || now.format();
 
             return {
                 licensePlate: item.licensePlate,
-                remainingTime: relevantEndTime ? dayjs(relevantEndTime).diff(now, 'minute') : 0,
+                remainingTime: dayjs(endTime).diff(now, 'minute'),
                 bookingType: item.bookingType
             };
         });
@@ -386,18 +386,15 @@ export const api = {
 
         // Get all end times and sort them
         const endTimes = occupiedSpots
-            .map(spot => spot.estimatedEndTime)
-            .filter((time): time is string => time !== null)
-            .sort();
+            .map(spot => spot.estimatedEndTime || now.format())
+            .sort((a, b) => dayjs(a).diff(dayjs(b)));
 
         // Update wait times for each queue item
         const updatedQueue = queue.data.map((item, index) => {
             // Each person needs to wait for the previous person plus the next available spot
             const waitPosition = index;
-            const relevantEndTime = endTimes[waitPosition];
-            const estimatedWaitTime = relevantEndTime
-                ? dayjs(relevantEndTime).diff(now, 'minute')
-                : 0;
+            const endTime = endTimes[waitPosition] || now.format();
+            const estimatedWaitTime = dayjs(endTime).diff(now, 'minute');
 
             return {
                 ...item,
