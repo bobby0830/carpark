@@ -7,14 +7,7 @@ import {
     Select,
     MenuItem,
     SelectChangeEvent,
-    Button,
-    Typography,
-    Paper,
-    Alert,
-    Snackbar,
-    List,
-    ListItem,
-    ListItemText
+    Button
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, Booking } from '../services/api';
@@ -34,7 +27,7 @@ const generateTimeSlots = (startTime: dayjs.Dayjs) => {
 };
 
 export const BookingPage: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    useParams<{ id: string }>();
     const navigate = useNavigate();
     const now = dayjs();
     const [selectedEndTime, setSelectedEndTime] = useState<string | null>('');
@@ -119,7 +112,7 @@ export const BookingPage: React.FC = () => {
             }
 
             // 创建预约
-            const booking: Omit<Booking, 'id'> = {
+            const bookingData: Omit<Booking, 'id'> = {
                 userId: 'user1',
                 spotId: availableSpot.id,
                 licensePlate,
@@ -128,13 +121,14 @@ export const BookingPage: React.FC = () => {
                 endTime
             };
 
-            const bookingResponse = await api.createBooking(booking);
+            await api.createBooking(bookingData);
 
             // 更新停车位状态
             await api.updateParkingSpot(availableSpot.id, {
-                status: booking.status,
+                status: bookingData.status,
                 currentUser: 'user1',
-                startTime: booking.bookingTime,
+                startTime: bookingData.bookingTime,
+                estimatedEndTime: bookingData.endTime
                 estimatedEndTime: booking.endTime
             });
 

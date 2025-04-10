@@ -96,23 +96,25 @@ export const api = {
 
         // Get all current bookings sorted by end time
         const activeBookings = bookings.data
-            .filter(b => b.status === '充电中' || b.status === '泊车中')
-            .sort((a, b) => dayjs(a.endTime).diff(dayjs(b.endTime)));
+            .filter((b: Booking) => b.status === '充电中' || b.status === '泊车中')
+            .sort((a: Booking, b: Booking) => dayjs(a.endTime).diff(dayjs(b.endTime)));
 
         // Calculate when spots will become available
-        const chargingSpots = spots.data.filter(spot => spot.isChargingSpot);
-        const parkingSpots = spots.data.filter(spot => !spot.isChargingSpot);
+        const chargingSpots = spots.data.filter((spot: ParkingSpot) => spot.isChargingSpot);
+        const parkingSpots = spots.data.filter((spot: ParkingSpot) => !spot.isChargingSpot);
 
         const chargingEndTimes = chargingSpots
-            .map(spot => {
-                const booking = activeBookings.find(b => b.spotId === spot.id);
-                return booking ? dayjs(booking.endTime) : now;
+            .map((spot: ParkingSpot) => {
+                return {
+                    spotId: spot.id,
+                    endTime: spot.estimatedEndTime
+                };
             })
-            .sort((a, b) => a.diff(b));
+            .sort((a: { endTime: string }, b: { endTime: string }) => dayjs(a.endTime).diff(dayjs(b.endTime)));
 
         const parkingEndTimes = parkingSpots
-            .map(spot => {
-                const booking = activeBookings.find(b => b.spotId === spot.id);
+            .map((spot: ParkingSpot) => {
+                const booking = activeBookings.find((b: Booking) => b.spotId === spot.id);
                 return booking ? dayjs(booking.endTime) : now;
             })
             .sort((a, b) => a.diff(b));
