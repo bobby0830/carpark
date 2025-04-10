@@ -105,19 +105,20 @@ export const api = {
 
         const chargingEndTimes = chargingSpots
             .map((spot: ParkingSpot) => {
+                const booking = activeBookings.find((b: Booking) => b.spotId === spot.id);
                 return {
                     spotId: spot.id,
-                    endTime: spot.estimatedEndTime
+                    endTime: booking ? booking.endTime : now.format()
                 };
             })
-            .sort((a: { endTime: string }, b: { endTime: string }) => dayjs(a.endTime).diff(dayjs(b.endTime)));
+            .sort((a, b) => dayjs(a.endTime || '').diff(dayjs(b.endTime || '')));
 
         const parkingEndTimes = parkingSpots
             .map((spot: ParkingSpot) => {
                 const booking = activeBookings.find((b: Booking) => b.spotId === spot.id);
                 return booking ? dayjs(booking.endTime) : now;
             })
-            .sort((a, b) => a.diff(b));
+            .sort((a, b) => a.unix() - b.unix());
 
         // Process queue items
         const chargingQueue = queue.data.filter(q => q.bookingType === '充电');
