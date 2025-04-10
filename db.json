@@ -1,0 +1,82 @@
+{
+  "users": [
+    {
+      "id": "user1",
+      "name": "用户名",
+      "phone": "138****8888",
+      "balance": 100,
+      "bookingCount": 5,
+      "coupons": 2,
+      "vehicles": [
+        {
+          "id": "v1",
+          "licensePlate": "粤B12345",
+          "type": "电动车"
+        }
+      ]
+    }
+  ],
+  "parkingSpots": [
+    {
+      "id": "A01",
+      "spotNumber": "A01",
+      "status": "未充电",
+      "currentUser": null,
+      "startTime": null,
+      "estimatedEndTime": null
+    },
+    {
+      "id": "A02",
+      "spotNumber": "A02",
+      "status": "未充电",
+      "currentUser": null,
+      "startTime": null,
+      "estimatedEndTime": null
+    },
+    {
+      "id": "A03",
+      "spotNumber": "A03",
+      "status": "未充电",
+      "currentUser": null,
+      "startTime": null,
+      "estimatedEndTime": null
+    },
+    {
+      "id": "B01",
+      "spotNumber": "B01",
+      "status": "未充电",
+      "currentUser": null,
+      "startTime": null,
+      "estimatedEndTime": null
+    }
+  ],
+  "bookings": [],
+  "waitingQueue": [],
+  "coupons": [
+    {
+      "id": "c1",
+      "userId": "user1",
+      "type": "discount",
+      "value": 10,
+      "expireDate": "2025-05-09",
+      "used": false
+    },
+    {
+      "id": "c2",
+      "userId": "user1",
+      "type": "discount",
+      "value": 5,
+      "expireDate": "2025-05-09",
+      "used": false
+    }
+  ],
+  "frequentParkingLots": [
+    {
+      "id": "f1",
+      "userId": "user1",
+      "name": "常用停车场1",
+      "address": "广东省深圳市南山区科技园",
+      "visitCount": 10
+    }
+  ]
+}
