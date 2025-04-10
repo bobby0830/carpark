@@ -7,7 +7,14 @@ import {
     Select,
     MenuItem,
     SelectChangeEvent,
-    Button
+    Button,
+    Typography,
+    Paper,
+    Alert,
+    Snackbar,
+    List,
+    ListItem,
+    ListItemText
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, Booking } from '../services/api';
@@ -129,7 +136,6 @@ export const BookingPage: React.FC = () => {
                 currentUser: 'user1',
                 startTime: bookingData.bookingTime,
                 estimatedEndTime: bookingData.endTime
-                estimatedEndTime: booking.endTime
             });
 
             // 如果是充电预约，加入等候队列
