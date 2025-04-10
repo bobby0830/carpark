@@ -116,9 +116,12 @@ export const api = {
         const parkingEndTimes = parkingSpots
             .map((spot: ParkingSpot) => {
                 const booking = activeBookings.find((b: Booking) => b.spotId === spot.id);
-                return booking ? dayjs(booking.endTime) : now;
+                return {
+                    spotId: spot.id,
+                    endTime: booking ? booking.endTime : now.format()
+                };
             })
-            .sort((a, b) => a.unix() - b.unix());
+            .sort((a, b) => dayjs(a.endTime).unix() - dayjs(b.endTime).unix());
 
         // Process queue items
         const chargingQueue = queue.data.filter(q => q.bookingType === '充电');
@@ -130,12 +133,12 @@ export const api = {
                 ? chargingQueue.findIndex(q => q.id === item.id)
                 : parkingQueue.findIndex(q => q.id === item.id);
 
-            const endTimes = item.bookingType === '充电' ? chargingEndTimes : parkingEndTimes;
-            const relevantEndTime = endTimes[position];
+            const endTimeObj = item.bookingType === '充电' ? chargingEndTimes[position] : parkingEndTimes[position];
+            const relevantEndTime = endTimeObj?.endTime || now.format();
 
             return {
                 licensePlate: item.licensePlate,
-                remainingTime: relevantEndTime ? relevantEndTime.diff(now, 'minute') : 0,
+                remainingTime: relevantEndTime ? dayjs(relevantEndTime).diff(now, 'minute') : 0,
                 bookingType: item.bookingType
             };
         });
