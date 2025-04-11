@@ -103,17 +103,12 @@ export const api = {
         const chargingSpots = spots.data.filter((spot: ParkingSpot) => spot.isChargingSpot);
         const parkingSpots = spots.data.filter((spot: ParkingSpot) => !spot.isChargingSpot);
 
-        const chargingEndTimes = chargingSpots
-            .map((spot: ParkingSpot) => {
-                const booking = activeBookings.find((b: Booking) => b.spotId === spot.id);
-                return {
-                    spotId: spot.id,
-                    endTime: booking ? booking.endTime : now.format()
-                };
-            })
-            .sort((a, b) => dayjs(a.endTime).unix() - dayjs(b.endTime).unix());
+        interface EndTimeInfo {
+            spotId: string;
+            endTime: string;
+        }
 
-        const parkingEndTimes = parkingSpots
+        const chargingEndTimes: EndTimeInfo[] = chargingSpots
             .map((spot: ParkingSpot) => {
                 const booking = activeBookings.find((b: Booking) => b.spotId === spot.id);
                 return {
@@ -121,7 +116,17 @@ export const api = {
                     endTime: booking ? booking.endTime : now.format()
                 };
             })
-            .sort((a, b) => dayjs(a.endTime).unix() - dayjs(b.endTime).unix());
+            .sort((a, b) => dayjs(a.endTime).diff(dayjs(b.endTime)));
+
+        const parkingEndTimes: EndTimeInfo[] = parkingSpots
+            .map((spot: ParkingSpot) => {
+                const booking = activeBookings.find((b: Booking) => b.spotId === spot.id);
+                return {
+                    spotId: spot.id,
+                    endTime: booking ? booking.endTime : now.format()
+                };
+            })
+            .sort((a, b) => dayjs(a.endTime).diff(dayjs(b.endTime)));
 
         // Process queue items
         const chargingQueue = queue.data.filter(q => q.bookingType === '充电');
@@ -129,16 +134,17 @@ export const api = {
 
         // Calculate remaining time for each queue item
         const processedQueue = queue.data.map(item => {
+            const relevantEndTimes = item.bookingType === '充电' ? chargingEndTimes : parkingEndTimes;
             const position = item.bookingType === '充电'
                 ? chargingQueue.findIndex(q => q.id === item.id)
                 : parkingQueue.findIndex(q => q.id === item.id);
-
             const endTimeObj = item.bookingType === '充电' ? chargingEndTimes[position] : parkingEndTimes[position];
             const endTime = endTimeObj?.endTime || now.format();
+            const estimatedWaitTime = dayjs(endTime).diff(now, 'minute');
 
             return {
                 licensePlate: item.licensePlate,
-                remainingTime: dayjs(endTime).diff(now, 'minute'),
+                remainingTime: Math.max(0, estimatedWaitTime),
                 bookingType: item.bookingType
             };
         });
@@ -198,9 +204,9 @@ export const api = {
         // Update wait times for each queue item
         const updatedQueue = queueToUpdate.data.map((item, index) => {
             const waitPosition = index;
-            const endTime = endTimes[waitPosition] || now.format();
-            const estimatedWaitTime = dayjs(endTime).diff(now, 'minute');
-
+            const currentEndTime = endTimes[waitPosition] || now.format();
+            const estimatedWaitTime = dayjs(currentEndTime).diff(now, 'minute');
+            
             return {
                 licensePlate: item.licensePlate,
                 remainingTime: Math.max(0, estimatedWaitTime),
