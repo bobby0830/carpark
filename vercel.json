@@ -10,6 +10,7 @@
   "routes": [
     {
       "src": "/static/(.*)",
+      "headers": { "cache-control": "public, max-age=31536000, immutable" },
       "dest": "/static/$1"
     },
     {
@@ -21,7 +22,16 @@
       "dest": "/manifest.json"
     },
     {
-      "src": "/.*",
+      "src": "/asset-manifest.json",
+      "dest": "/asset-manifest.json"
+    },
+    {
+      "src": "/(.+)",
+      "headers": { "cache-control": "s-maxage=1, stale-while-revalidate" },
+      "dest": "/index.html"
+    },
+    {
+      "src": "/",
       "dest": "/index.html"
     }
   ]

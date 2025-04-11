@@ -1,7 +1,7 @@
 import axios from 'axios';
 import dayjs from 'dayjs';
 
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 export type User = {
     id: string;
@@ -145,8 +145,8 @@ export const api = {
 
         // Calculate estimated wait time for a new booking
         const estimatedWaitTime = Math.max(
-            chargingQueue.length > 0 ? chargingEndTimes[chargingQueue.length - 1].diff(now, 'minute') : 0,
-            parkingQueue.length > 0 ? parkingEndTimes[parkingQueue.length - 1].diff(now, 'minute') : 0
+            chargingQueue.length > 0 ? dayjs(chargingEndTimes[chargingQueue.length - 1].endTime).diff(now, 'minute') : 0,
+            parkingQueue.length > 0 ? dayjs(parkingEndTimes[parkingQueue.length - 1].endTime).diff(now, 'minute') : 0
         );
 
         return {
