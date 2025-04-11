@@ -58,7 +58,7 @@ export interface QueueItem {
     estimatedWaitTime: number;
     queueStartTime: string;
     bookingType: '充电' | '泊车';
-};
+}
 
 export const calculateActualWaitTime = (queueStartTime: string): number => {
     const startTime = dayjs(queueStartTime);
@@ -74,7 +74,7 @@ export type FrequentParkingLot = {
     visitCount: number;
 };
 
-interface QueueInfo {
+export interface QueueInfo {
     waitingCount: number;
     estimatedWaitTime: number;
     currentQueue: Array<{
@@ -181,36 +181,40 @@ export const api = {
         ]);
 
         const now = dayjs();
-        const occupiedSpots = spots.data.filter(spot => 
+
+        // Filter occupied spots
+        const occupiedSpots = spotsToUpdate.data.filter(spot => 
             spot.status === '充电中' || 
             spot.status === '准备充电' || 
-            spot.status === '只是泊车'
+            spot.status === '只是泊车' || 
+            spot.status === '泊车中'
         );
 
         // Get all end times and sort them
         const endTimes = occupiedSpots
-            .map(spot => spot.estimatedEndTime)
-            .filter((time): time is string => time !== null)
-            .sort();
+            .map(spot => spot.estimatedEndTime || now.format())
+            .sort((a, b) => dayjs(a).diff(dayjs(b)));
 
         // Update wait times for each queue item
-        const updatedQueue = queueToUpdate.data.map((item: QueueItem, index: number) => {
-            // Each person needs to wait for the previous person plus the next available spot
+        const updatedQueue = queueToUpdate.data.map((item, index) => {
             const waitPosition = index;
-            const relevantEndTime = endTimes[waitPosition];
-            const estimatedWaitTime = relevantEndTime
-                ? dayjs(relevantEndTime).diff(now, 'minute')
-                : 0;
+            const endTime = endTimes[waitPosition] || now.format();
+            const estimatedWaitTime = dayjs(endTime).diff(now, 'minute');
 
             return {
-                ...item,
-                estimatedWaitTime
+                licensePlate: item.licensePlate,
+                remainingTime: Math.max(0, estimatedWaitTime),
+                bookingType: item.bookingType
             };
         });
 
-        // Update all queue items
-        await Promise.all(updatedQueue.map((item: QueueItem) =>
-            axios.put(`${BASE_URL}/waitingQueue/${item.id}`, item)
+        // Update each queue item with new estimated wait time
+        await Promise.all(updatedQueue.map((item, index) =>
+            axios.put(`${BASE_URL}/waitingQueue/${queueToUpdate.data[index].id}`, {
+                ...item,
+                queueNumber: index + 1,
+                estimatedWaitTime: item.remainingTime
+            })
         ));
 
         // Clear waiting queue
@@ -219,11 +223,11 @@ export const api = {
             axios.delete(`${BASE_URL}/waitingQueue/${item.id}`)
         ));
 
-        return { success: true };
+        return true;
     },
 
     // Auto-matching parking spot
-    findAvailableSpot: async (bookingTime: string, endTime: string, requireCharging: boolean) => {
+    findAvailableSpot: async (bookingTime: string, endTime: string, requireCharging: boolean): Promise<ParkingSpot | null> => {
         const spots = await axios.get<ParkingSpot[]>(`${BASE_URL}/parkingSpots`);
         const bookings = await axios.get<Booking[]>(`${BASE_URL}/bookings`);
         
@@ -348,9 +352,8 @@ export const api = {
 
         // Get all end times and sort them
         const endTimes = occupiedSpots
-            .map((spot: ParkingSpot) => spot.estimatedEndTime)
-            .filter((time: string | null): time is string => time !== null)
-            .sort();
+            .map(spot => spot.estimatedEndTime || now.format())
+            .sort((a, b) => dayjs(a).diff(dayjs(b)));
 
         // Calculate queue position and estimated wait time
         const queuePosition = queue.data.length + 1;
@@ -371,55 +374,12 @@ export const api = {
         return response.data;
     },
 
-    getWaitingQueue: async () => {
-        const [queue, spots] = await Promise.all([
-            axios.get<QueueItem[]>(`${BASE_URL}/waitingQueue`),
-            axios.get<ParkingSpot[]>(`${BASE_URL}/parkingSpots`)
-        ]);
-
-        const now = dayjs();
-        const occupiedSpots = spots.data.filter(spot => 
-            spot.status === '充电中' || 
-            spot.status === '准备充电' || 
-            spot.status === '只是泊车'
-        );
-
-        // Get all end times and sort them
-        const endTimes = occupiedSpots
-            .map(spot => spot.estimatedEndTime || now.format())
-            .sort((a, b) => dayjs(a).diff(dayjs(b)));
-
-        // Update wait times for each queue item
-        const updatedQueue = queue.data.map((item, index) => {
-            // Each person needs to wait for the previous person plus the next available spot
-            const waitPosition = index;
-            const endTime = endTimes[waitPosition] || now.format();
-            const estimatedWaitTime = dayjs(endTime).diff(now, 'minute');
-
-            return {
-                ...item,
-                estimatedWaitTime
-            };
-        });
-
-        // Update all queue items
-        await Promise.all(updatedQueue.map(item =>
-            axios.put(`${BASE_URL}/waitingQueue/${item.id}`, item)
-        ));
-
-        return { data: updatedQueue };
+    removeFromQueue: async (id: string): Promise<void> => {
+        await axios.delete(`${BASE_URL}/waitingQueue/${id}`);
     },
 
-    removeFromQueue: (id: string) => 
-        axios.delete(`${BASE_URL}/waitingQueue/${id}`),
-
-    addToQueue: (data: {
-        userId: string;
-        licensePlate: string;
-        estimatedWaitTime: number;
-    }) => axios.post(`${BASE_URL}/waitingQueue`, {
-        ...data,
-        queueNumber: 1, // Will be updated by server
-        queueStartTime: new Date().toISOString()
-    }),
-};
+    getWaitingQueue: async (): Promise<QueueItem[]> => {
+        const response = await axios.get<QueueItem[]>(`${BASE_URL}/waitingQueue`);
+        return response.data;
+    }
+}
